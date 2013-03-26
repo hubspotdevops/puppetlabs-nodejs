@@ -11,6 +11,7 @@
 class nodejs(
   $node_pkg       = $nodejs::params::node_pkg,
   $npm_pkg        = $nodejs::params::npm_pkg,
+  $install_npm    = true,
   $configure_repo = true,
   $dev_package    = false,
   $proxy          = ''
@@ -77,7 +78,7 @@ class nodejs(
     }
   }
 
-  if $npm_pkg {
+  if $install_npm {
     package { 'npm':
       name    => $npm_pkg,
       ensure  => present,
