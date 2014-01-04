@@ -1,0 +1,22 @@
+{
+  "name": "puppetlabs-nodejs",
+  "version": "0.4.0",
+  "summary": "Nodejs \u0026 NPM Puppet Module",
+  "author": "Puppet Labs",
+  "description": "Nodejs \u0026 NPM Puppet Module.",
+  "dependencies": [
+    {
+      "name": "puppetlabs/apt",
+      "version_requirement": "\u003e\u003d 0.0.3"
+    },
+    {
+      "name": "puppetlabs/stdlib",
+      "version_requirement": "\u003e\u003d 2.0.0"
+    }
+  ],
+  "types": [],
+  "checksums": {},
+  "source": "git://github.com/puppetlabs/puppetlabs-nodejs",
+  "project_page": "https://github.com/puppetlabs/puppetlabs-nodejs",
+  "license": "Apache 2.0"
+}
