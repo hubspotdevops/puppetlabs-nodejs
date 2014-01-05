@@ -9,19 +9,20 @@
 # Usage:
 #
 class nodejs(
-  $node_pkg       = $nodejs::params::node_pkg,
-  $npm_pkg        = $nodejs::params::npm_pkg,
-  $install_npm    = true,
-  $configure_repo = true,
-  $dev_package    = false,
-  $proxy          = ''
+  $dev_package = false,
+  $manage_repo = false,
+  $proxy       = '',
+  $version     = 'present'
 ) inherits nodejs::params {
+  #input validation
+  validate_bool($dev_package)
+  validate_bool($manage_repo)
 
-  if $configure_repo {
-    case $::operatingsystem {
-      'Debian': {
+  case $::operatingsystem {
+    'Debian': {
+      if $manage_repo {
+        #only add apt source if we're managing the repo
         include 'apt'
-
         apt::source { 'sid':
           location    => 'http://ftp.us.debian.org/debian/',
           release     => 'sid',
@@ -30,26 +31,30 @@ class nodejs(
           include_src => false,
           before      => Anchor['nodejs::repo'],
         }
-
       }
+    }
 
-      'Ubuntu': {
+    'Ubuntu': {
+      if $manage_repo {
+        # Only add apt source if we're managing the repo
         include 'apt'
-
         # Only use PPA when necessary.
-        if $::lsbdistcodename != 'Precise'{
-          apt::ppa { 'ppa:chris-lea/node.js':
-            before => Anchor['nodejs::repo'],
-          }
+        apt::ppa { 'ppa:chris-lea/node.js':
+          before => Anchor['nodejs::repo'],
+        }
+
+        apt::ppa { 'ppa:chris-lea/node.js-devel':
+          before => Anchor['nodejs::repo'],
         }
       }
+    }
 
-      'Fedora', 'RedHat', 'CentOS', 'OEL', 'OracleLinux', 'Amazon': {
+    'Fedora', 'RedHat', 'CentOS', 'OEL', 'OracleLinux', 'Amazon': {
+      if $manage_repo {
         package { 'nodejs-stable-release':
           ensure => absent,
           before => Yumrepo['nodejs-stable'],
         }
-
         yumrepo { 'nodejs-stable':
           descr    => 'Stable releases of Node.js',
           baseurl  => $nodejs::params::baseurl,
@@ -58,11 +63,20 @@ class nodejs(
           gpgkey   => 'http://patches.fedorapeople.org/oldnode/stable/RPM-GPG-KEY-tchol',
           before   => Anchor['nodejs::repo'],
         }
+        file {'nodejs_repofile':
+          ensure  => 'file',
+          before  => Anchor['nodejs::repo'],
+          group   => 'root',
+          mode    => '0444',
+          owner   => 'root',
+          path    => '/etc/yum.repos.d/nodejs-stable.repo',
+          require => Yumrepo['nodejs-stable']
+        }
       }
+    }
 
-      default: {
-        fail("Class nodejs does not support ${::operatingsystem}")
-      }
+    default: {
+      fail("Class nodejs does not support ${::operatingsystem}")
     }
   }
 
@@ -70,22 +84,18 @@ class nodejs(
   anchor { 'nodejs::repo': }
 
   package { 'nodejs':
-    name    => $node_pkg,
-    ensure  => present,
-    require => $configure_repo ? {
-      true    => Anchor['nodejs::repo'],
-      default => undef,
-    }
+    name    => $nodejs::params::node_pkg,
+    ensure  => $version,
+    require => Anchor['nodejs::repo']
   }
 
-  if $install_npm {
+  if $::operatingsystem != 'ubuntu' {
+    # The PPA we are using on Ubuntu includes NPM in the nodejs package, hence
+    # we must not install it separately
     package { 'npm':
-      name    => $npm_pkg,
+      name    => $nodejs::params::npm_pkg,
       ensure  => present,
-      require => $configure_repo ? {
-        true    => Anchor['nodejs::repo'],
-        default => undef,
-      }
+      require => Anchor['nodejs::repo']
     }
   }
 
@@ -100,7 +110,7 @@ class nodejs(
   if $dev_package and $nodejs::params::dev_pkg {
     package { 'nodejs-dev':
       name    => $nodejs::params::dev_pkg,
-      ensure  => present,
+      ensure  => $version,
       require => Anchor['nodejs::repo']
     }
   }
